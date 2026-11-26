@@ -37,21 +37,104 @@ New signups are always created with the `user` role. Admins see an **admin** bad
 ## Project structure
 
 ```
-├── index.html               # Vite entry
-├── vite.config.ts           # dev proxy for /api, /graphql, /uploads
-├── server/
-│   ├── index.js             # Express app: REST routes, auth, uploads, GraphQL
-│   └── db.js                # better-sqlite3 connection + schema
-├── src/
-│   ├── api.ts               # REST + GraphQL client
-│   ├── auth.tsx             # auth context / session state
-│   ├── types.ts
-│   ├── App.tsx              # router + providers
-│   ├── components/          # Navbar, ProtectedRoute
-│   ├── pages/               # Login, Signup, Gallery, Detail, Add, MyRecipes
-│   └── styles.css
-├── uploads/                 # uploaded recipe photos (gitignored)
-└── data/recipes.db          # SQLite database (gitignored)
+RecipeShare/
+├── index.html                    # Vite entry point
+├── vite.config.ts                # Vite config: proxies /api, /graphql, /uploads to backend
+├── package.json                  # Dependencies and scripts
+├── tsconfig.json                 # TypeScript configuration
+├── eslint.config.js              # ESLint rules
+├── .prettierrc                   # Prettier formatting rules
+│
+├── server/                       # Backend (Express + SQLite)
+│   ├── index.js                  # Main Express server
+│   │                             # - REST API routes (auth, recipes, stats)
+│   │                             # - GraphQL schema and resolvers
+│   │                             # - JWT authentication middleware
+│   │                             # - Multer image upload handling
+│   │                             # - Static file serving for uploads
+│   └── db.js                     # SQLite database connection and schema
+│                                 # - better-sqlite3 connection
+│                                 # - Users and Recipes tables
+│
+├── src/                          # Frontend (React + TypeScript)
+│   ├── main.tsx                  # React entry point
+│   ├── App.tsx                   # Main app component
+│   │                             # - React Router setup
+│   │                             # - AuthProvider wrapper
+│   │                             # - Route definitions for all pages
+│   │
+│   ├── api.ts                    # API client functions
+│   │                             # - localStorage session management
+│   │                             # - REST API calls (signup, login, recipes)
+│   │                             # - GraphQL queries (listRecipes, deleteRecipe)
+│   │
+│   ├── auth.tsx                  # Authentication context
+│   │                             # - AuthProvider component
+│   │                             # - Session state management
+│   │                             # - login/signup/logout functions
+│   │
+│   ├── types.ts                  # TypeScript interfaces
+│   │                             # - User, Recipe, Stats types
+│   │
+│   ├── components/               # Reusable UI components
+│   │   ├── Navbar.tsx            # Navigation bar with auth links
+│   │   ├── ProtectedRoute.tsx    # Route guard for authenticated pages
+│   │   └── RecipeLists.tsx       # Recipe grid component
+│   │
+│   ├── pages/                    # Page components
+│   │   ├── LoginPage.tsx         # Login form
+│   │   ├── SignupPage.tsx        # Signup form
+│   │   ├── GalleryPage.tsx       # Recipe gallery (uses GraphQL)
+│   │   ├── RecipeDetailPage.tsx  # Single recipe view
+│   │   ├── AddRecipePage.tsx     # Add/edit recipe form (REST)
+│   │   └── MyRecipesPage.tsx     # User's own recipes
+│   │
+│   └── styles.css                 # Global styles
+│
+├── uploads/                      # Uploaded recipe images (gitignored)
+├── data/                         # Database files (gitignored)
+│   └── recipes.db                # SQLite database file
+└── dist/                         # Production build output (gitignored)
+```
+
+## Architecture & File Connections
+
+### Frontend Flow
+1. **Entry Point**: `main.tsx` → renders `App.tsx`
+2. **App.tsx**: Sets up React Router, wraps everything in `AuthProvider`, includes `Navbar`
+3. **Authentication**: `auth.tsx` provides `useAuth()` hook to all pages for login/signup/logout
+4. **API Communication**: `api.ts` handles all HTTP requests to backend (REST + GraphQL)
+5. **Pages**: Each page component uses `useAuth()` for auth state and functions from `api.ts` for data
+
+### Backend Flow
+1. **Server Entry**: `server/index.js` starts Express server on port 3001
+2. **Database**: `server/db.js` establishes SQLite connection and defines schema
+3. **REST Routes**:
+   - `/api/auth/*` - signup, login, user verification (JWT + bcrypt)
+   - `/api/recipes` - CRUD operations with image upload (multer)
+   - `/api/stats` - app statistics
+4. **GraphQL**: `/graphql` endpoint with schema for recipe operations
+5. **Static Files**: `/uploads` serves uploaded images
+
+### Data Flow Example (Login)
+```
+LoginPage.tsx → auth.tsx (login) → api.ts (login) → server/index.js (/api/auth/login)
+→ db.js (user lookup) → bcrypt password check → JWT token generation
+→ api.ts stores token in localStorage → auth.tsx updates user state
+```
+
+### Data Flow Example (View Recipes)
+```
+GalleryPage.tsx → api.ts (listRecipes) → GraphQL query to /graphql
+→ server/index.js (GraphQL resolver) → db.js (SELECT from recipes)
+→ Recipe data returned → GalleryPage displays via RecipeLists component
+```
+
+### Data Flow Example (Add Recipe)
+```
+AddRecipePage.tsx → api.ts (createRecipeForm) → POST /api/recipes with FormData
+→ server/index.js (multer processes image upload) → db.js (INSERT into recipes)
+→ Recipe data returned → Navigate to recipe detail page
 ```
 
 ## Scripts
