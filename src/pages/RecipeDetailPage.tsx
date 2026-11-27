@@ -63,6 +63,17 @@ export default function RecipeDetailPage() {
       <p className="muted" style={{ fontSize: '0.95rem', marginBottom: '1.25rem' }}>
         by <strong>{recipe.authorName}</strong> · {new Date(recipe.createdAt).toLocaleDateString()}
       </p>
+      {(recipe.category || recipe.prepTime) && (
+        <p className="muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+          {recipe.category && <span style={{ marginRight: '1rem' }}>📂 {recipe.category}</span>}
+          {recipe.prepTime && <span>⏱️ {recipe.prepTime} min prep time</span>}
+        </p>
+      )}
+      {recipe.description && (
+        <p style={{ marginBottom: '1.5rem', fontSize: '1.05rem', lineHeight: '1.6' }}>
+          {recipe.description}
+        </p>
+      )}
       {canDelete && (
         <div className="detail-actions">
           <Link className="link-button" to={`/recipes/${recipe.id}/edit`}>
