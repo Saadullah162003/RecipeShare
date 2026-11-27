@@ -5,7 +5,10 @@ import type { Recipe, Stats } from './types';
 
 const client = generateClient();
 
-// 1. Upload image directly to S3 and return public URL
+const RECIPE_FIELDS = `
+  id title description ingredients instructions category prepTime imageUrl authorId authorName createdAt
+`;
+
 export async function uploadRecipeImage(file: File): Promise<string> {
   const key = `recipes/${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
   await uploadData({
@@ -19,74 +22,60 @@ export async function uploadRecipeImage(file: File): Promise<string> {
   return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 }
 
-// 2. AppSync GraphQL Queries & Mutations
 export async function fetchRecipes(): Promise<Recipe[]> {
   const res: any = await client.graphql({
-    query: `
-      query ListRecipes {
-        listRecipes {
-          id title description ingredients instructions category prepTime imageUrl authorId authorName createdAt
-        }
-      }
-    `,
+    query: `query ListRecipes { listRecipes { ${RECIPE_FIELDS} } }`,
+    authMode: 'apiKey',
   });
   return res.data.listRecipes || [];
 }
 
 export async function getRecipe(id: string): Promise<Recipe> {
   const res: any = await client.graphql({
-    query: `
-      query GetRecipe($id: ID!) {
-        getRecipe(id: $id) {
-          id title description ingredients instructions category prepTime imageUrl authorId authorName createdAt
-        }
-      }
-    `,
+    query: `query GetRecipe($id: ID!) { getRecipe(id: $id) { ${RECIPE_FIELDS} } }`,
     variables: { id },
+    authMode: 'apiKey',
   });
   return res.data.getRecipe;
 }
 
 export async function createRecipe(input: any): Promise<Recipe> {
   const res: any = await client.graphql({
-    query: `
-      mutation CreateRecipe($input: CreateRecipeInput!) {
-        createRecipe(input: $input) {
-          id title description ingredients instructions category prepTime imageUrl authorId authorName createdAt
-        }
-      }
-    `,
+    query: `mutation CreateRecipe($input: CreateRecipeInput!) { createRecipe(input: $input) { ${RECIPE_FIELDS} } }`,
     variables: { input },
+    authMode: 'userPool',
   });
   return res.data.createRecipe;
 }
 
 export async function updateRecipe(input: any): Promise<Recipe> {
+  const sanitizedInput = {
+    id: input.id,
+    ...(input.title !== undefined && { title: input.title }),
+    ...(input.description !== undefined && { description: input.description }),
+    ...(input.ingredients !== undefined && { ingredients: input.ingredients }),
+    ...(input.instructions !== undefined && { instructions: input.instructions }),
+    ...(input.category !== undefined && { category: input.category }),
+    ...(input.prepTime !== undefined && { prepTime: Number(input.prepTime) }),
+    ...(input.imageUrl !== undefined && { imageUrl: input.imageUrl }),
+  };
+
   const res: any = await client.graphql({
-    query: `
-      mutation UpdateRecipe($input: UpdateRecipeInput!) {
-        updateRecipe(input: $input) {
-          id title description ingredients instructions category prepTime imageUrl authorId authorName createdAt
-        }
-      }
-    `,
-    variables: { input },
+    query: `mutation UpdateRecipe($input: UpdateRecipeInput!) { updateRecipe(input: $input) { ${RECIPE_FIELDS} } }`,
+    variables: { input: sanitizedInput },
+    authMode: 'userPool',
   });
   return res.data.updateRecipe;
 }
 
 export async function deleteRecipe(id: string): Promise<void> {
   await client.graphql({
-    query: `
-      mutation DeleteRecipe($id: ID!) {
-        deleteRecipe(id: $id) { id }
-      }
-    `,
+    query: `mutation DeleteRecipe($id: ID!) { deleteRecipe(id: $id) { id } }`,
     variables: { id },
+    authMode: 'userPool',
   });
 }
 
-// 3. API Gateway REST endpoint (/stats) with Cognito JWT token
 export async function fetchStats(): Promise<Stats> {
   const session = await fetchAuthSession();
   const token = session.tokens?.idToken?.toString() || '';
@@ -99,5 +88,5 @@ export async function fetchStats(): Promise<Stats> {
     },
   });
   const { body } = await restOp.response;
-  return await body.json();
+  return (await body.json()) as unknown as Stats;
 }
