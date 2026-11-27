@@ -3,17 +3,17 @@ interface RecipeListsProps {
   steps: string;
 }
 
-function toLines(text: string, stripPattern: RegExp, splitCommas: boolean): string[] {
-  return text
-    .split(/\r?\n/)
-    .flatMap((l) => (splitCommas ? l.split(',') : [l]))
-    .map((l) => l.trim().replace(stripPattern, '').trim())
-    .filter(Boolean);
-}
-
 export default function RecipeLists({ ingredients, steps }: RecipeListsProps) {
-  const ingredientItems = toLines(ingredients, /^[-•*]\s*/, true);
-  const stepItems = toLines(steps, /^\d+[.)]\s*/, false);
+  // Split by newlines only, don't try to strip formatting
+  const ingredientItems = ingredients
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  
+  const stepItems = steps
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 
   return (
     <>

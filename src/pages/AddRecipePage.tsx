@@ -87,9 +87,13 @@ export default function AddRecipePage() {
     
     try {
       // Upload image to S3 if a new file is selected
-      let imageUrl: string | undefined = currentImage && !removeImage ? currentImage : undefined;
+      let imageUrl: string | null | undefined = currentImage && !removeImage ? currentImage : null;
       if (image) {
         imageUrl = await uploadRecipeImage(image);
+      }
+      // If removeImage is true and no new image, explicitly set to null to remove it
+      if (removeImage && !image) {
+        imageUrl = null;
       }
 
       const ingredientsArray = ingredients.split('\n').filter(i => i.trim());
@@ -101,7 +105,7 @@ export default function AddRecipePage() {
         instructions,
         category,
         prepTime: prepTime ? parseInt(prepTime, 10) : undefined,
-        imageUrl: imageUrl || undefined,
+        imageUrl: imageUrl === undefined ? undefined : imageUrl,
         authorId: user?.id || '',
         authorName: user?.name || '',
       };
