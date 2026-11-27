@@ -49,17 +49,16 @@ export async function createRecipe(input: any): Promise<Recipe> {
 }
 
 export async function updateRecipe(input: any): Promise<Recipe> {
-  const sanitizedInput: any = {
+  const sanitizedInput = {
     id: input.id,
+    ...(input.title !== undefined && { title: input.title }),
+    ...(input.description !== undefined && { description: input.description }),
+    ...(input.ingredients !== undefined && { ingredients: input.ingredients }),
+    ...(input.instructions !== undefined && { instructions: input.instructions }),
+    ...(input.category !== undefined && { category: input.category }),
+    ...(input.prepTime !== undefined && { prepTime: Number(input.prepTime) }),
+    ...(input.imageUrl !== undefined && { imageUrl: input.imageUrl }),
   };
-  
-  if (input.title !== undefined) sanitizedInput.title = input.title;
-  if (input.description !== undefined) sanitizedInput.description = input.description;
-  if (input.ingredients !== undefined) sanitizedInput.ingredients = input.ingredients;
-  if (input.instructions !== undefined) sanitizedInput.instructions = input.instructions;
-  if (input.category !== undefined) sanitizedInput.category = input.category;
-  if (input.prepTime !== undefined && input.prepTime !== '') sanitizedInput.prepTime = Number(input.prepTime);
-  if (input.imageUrl !== undefined) sanitizedInput.imageUrl = input.imageUrl;
 
   const res: any = await client.graphql({
     query: `mutation UpdateRecipe($input: UpdateRecipeInput!) { updateRecipe(input: $input) { ${RECIPE_FIELDS} } }`,
