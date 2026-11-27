@@ -69,12 +69,6 @@ export default function GalleryPage() {
                 <h3>{r.title}</h3>
               </Link>
               <p className="muted small">by {r.authorName}</p>
-              {(r.category || r.prepTime) && (
-                <p className="muted small" style={{ marginTop: '0.5rem' }}>
-                  {r.category && <span style={{ marginRight: '0.5rem' }}>📂 {r.category}</span>}
-                  {r.prepTime && <span>⏱️ {r.prepTime} min</span>}
-                </p>
-              )}
               {canDelete(r) && (
                 <div className="card-actions">
                   <Link className="link-button" to={`/recipes/${r.id}/edit`}>
