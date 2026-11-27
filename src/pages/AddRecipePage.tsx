@@ -109,7 +109,13 @@ export default function AddRecipePage() {
       if (isEdit && recipeId) {
         const updateInput = {
           id: recipeId,
-          ...recipeInput,
+          title,
+          description,
+          ingredients: ingredientsArray,
+          instructions,
+          category,
+          prepTime: prepTime ? parseInt(prepTime, 10) : undefined,
+          imageUrl: imageUrl || undefined,
         };
         await updateRecipe(updateInput);
         navigate(`/recipes/${recipeId}`);
