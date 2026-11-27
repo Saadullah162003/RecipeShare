@@ -6,14 +6,5 @@ export default defineConfig({
   server: {
     port: 5173,
   },
-  build: {
-    outDir: 'dist',
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          amplify: ['aws-amplify'],
-        },
-      },
-    },
-  },
+  // Vite automatically exposes VITE_* environment variables, no need for define
 });
