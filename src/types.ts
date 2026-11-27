@@ -1,21 +1,24 @@
 export interface User {
-  id: number;
+  cognito_sub: string;
   email: string;
   role: 'admin' | 'user';
 }
 
 export interface Recipe {
-  id: number;
+  id: string;
   title: string;
-  ingredients: string;
-  steps: string;
-  image: string | null;
-  ownerId: number;
-  ownerEmail: string | null;
+  description?: string;
+  ingredients?: string[];
+  instructions?: string;
+  category?: string;
+  prepTime?: number;
+  imageUrl?: string;
+  authorId: string;
+  authorName: string;
   createdAt: string;
 }
 
 export interface Stats {
-  recipeCount: number;
-  latestRecipeTitle: string | null;
+  totalRecipes: number;
+  categories: Record<string, number>;
 }

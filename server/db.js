@@ -13,9 +13,8 @@ db.pragma('journal_mode = WAL');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cognito_sub TEXT PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'user',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -26,7 +25,7 @@ db.exec(`
     ingredients TEXT NOT NULL,
     steps TEXT NOT NULL,
     image TEXT,
-    owner_id INTEGER NOT NULL REFERENCES users(id),
+    owner_sub TEXT NOT NULL REFERENCES users(cognito_sub),
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { deleteRecipe, fetchStats, listRecipes } from '../api';
+import { deleteRecipe, fetchStats, fetchRecipes } from '../api';
 import { useAuth } from '../auth';
 import type { Recipe, Stats } from '../types';
 
@@ -12,7 +12,7 @@ export default function GalleryPage() {
 
   const load = useCallback(async () => {
     try {
-      const [r, s] = await Promise.all([listRecipes(), fetchStats()]);
+      const [r, s] = await Promise.all([fetchRecipes(), fetchStats()]);
       setRecipes(r);
       setStats(s);
     } catch (err) {
@@ -24,7 +24,7 @@ export default function GalleryPage() {
     void load();
   }, [load]);
 
-  async function onDelete(id: number) {
+  async function onDelete(id: string) {
     if (!window.confirm('Delete this recipe?')) return;
     try {
       await deleteRecipe(id);
@@ -35,7 +35,7 @@ export default function GalleryPage() {
   }
 
   function canDelete(r: Recipe) {
-    return !!user && (user.role === 'admin' || r.ownerId === user.id);
+    return !!user && (user.isAdmin || r.authorId === user.id);
   }
 
   return (
@@ -44,8 +44,7 @@ export default function GalleryPage() {
         <h1>🍽️ Recipe Gallery</h1>
         {stats && (
           <p className="muted small">
-            {stats.recipeCount} recipe{stats.recipeCount === 1 ? '' : 's'} · latest:{' '}
-            <em>{stats.latestRecipeTitle ?? '—'}</em>
+            {stats.totalRecipes} recipe{stats.totalRecipes === 1 ? '' : 's'}
           </p>
         )}
       </div>
@@ -62,14 +61,14 @@ export default function GalleryPage() {
           {recipes.map((r) => (
             <div className="recipe-card" key={r.id}>
               <Link to={`/recipes/${r.id}`}>
-                {r.image ? (
-                  <img src={r.image} alt={r.title} loading="lazy" />
+                {r.imageUrl ? (
+                  <img src={r.imageUrl} alt={r.title} loading="lazy" />
                 ) : (
                   <div className="recipe-placeholder">🍽️</div>
                 )}
                 <h3>{r.title}</h3>
               </Link>
-              <p className="muted small">by {r.ownerEmail}</p>
+              <p className="muted small">by {r.authorName}</p>
               {canDelete(r) && (
                 <div className="card-actions">
                   <Link className="link-button" to={`/recipes/${r.id}/edit`}>

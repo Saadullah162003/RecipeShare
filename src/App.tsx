@@ -3,6 +3,7 @@ import { AuthProvider } from './auth';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import AddRecipePage from './pages/AddRecipePage';
+import AuthCallbackPage from './pages/AuthCallbackPage';
 import GalleryPage from './pages/GalleryPage';
 import LoginPage from './pages/LoginPage';
 import MyRecipesPage from './pages/MyRecipesPage';
@@ -17,6 +18,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route
             path="/"
             element={

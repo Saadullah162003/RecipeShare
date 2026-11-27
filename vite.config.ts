@@ -5,10 +5,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: {
-      '/api': 'http://localhost:3001',
-      '/graphql': 'http://localhost:3001',
-      '/uploads': 'http://localhost:3001',
-    },
   },
+  // Vite automatically exposes VITE_* environment variables, no need for define
 });

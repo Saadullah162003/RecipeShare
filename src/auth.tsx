@@ -1,76 +1,106 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
-import type { User } from './types';
-import {
-  clearSession,
-  fetchMe,
-  getStoredUser,
-  getToken,
-  login as apiLogin,
-  logout as apiLogout,
-  signup as apiSignup,
-} from './api';
+  signIn,
+  signUp,
+  confirmSignUp,
+  signInWithRedirect,
+  signOut,
+  getCurrentUser,
+  fetchAuthSession,
+} from 'aws-amplify/auth';
 
-interface AuthContextValue {
-  user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  groups: string[];
+  isAdmin: boolean;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+interface AuthContextType {
+  user: AuthUser | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
+  confirmRegistration: (email: string, code: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
+  getToken: () => Promise<string | undefined>;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(getStoredUser);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await getCurrentUser();
+      const session = await fetchAuthSession();
+      const payload = session.tokens?.idToken?.payload || {};
+      const groups = (payload['cognito:groups'] as string[]) || [];
+
+      setUser({
+        id: currentUser.userId,
+        email: (payload.email as string) || currentUser.signInDetails?.loginId || '',
+        name: (payload.name as string) || (payload.email as string) || 'Chef',
+        groups,
+        isAdmin: groups.includes('Admins'),
+      });
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!getToken()) {
-      clearSession();
-      setUser(null);
-      return;
-    }
-    let cancelled = false;
-    fetchMe()
-      .then((u) => {
-        if (!cancelled) setUser(u);
-      })
-      .catch(() => {
-        clearSession();
-        if (!cancelled) setUser(null);
-      });
-    return () => {
-      cancelled = true;
-    };
+    loadUser();
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const u = await apiLogin(email, password);
-    setUser(u);
-  }, []);
+  const login = async (email: string, password: string) => {
+    await signIn({ username: email, password });
+    await loadUser();
+  };
 
-  const signup = useCallback(async (email: string, password: string) => {
-    const u = await apiSignup(email, password);
-    setUser(u);
-  }, []);
+  const register = async (email: string, password: string, name: string) => {
+    await signUp({
+      username: email,
+      password,
+      options: { userAttributes: { email, name } },
+    });
+  };
 
-  const logout = useCallback(() => {
-    void apiLogout();
+  const confirmRegistration = async (email: string, code: string) => {
+    await confirmSignUp({ username: email, confirmationCode: code });
+  };
+
+  const loginWithGoogle = async () => {
+    await signInWithRedirect({ provider: 'Google' });
+  };
+
+  const logout = async () => {
+    await signOut();
     setUser(null);
-  }, []);
+  };
 
-  const value = useMemo(() => ({ user, login, signup, logout }), [user, login, signup, logout]);
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  const getToken = async () => {
+    const session = await fetchAuthSession();
+    return session.tokens?.idToken?.toString();
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{ user, loading, login, register, confirmRegistration, loginWithGoogle, logout, getToken }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-export function useAuth(): AuthContextValue {
+export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
   return ctx;
 }

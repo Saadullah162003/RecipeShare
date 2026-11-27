@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { deleteRecipe, listRecipes } from '../api';
+import { deleteRecipe, getRecipe } from '../api';
 import { useAuth } from '../auth';
 import RecipeLists from '../components/RecipeLists';
 import type { Recipe } from '../types';
@@ -12,9 +12,10 @@ export default function RecipeDetailPage() {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
+    if (!id) return;
     try {
-      const all = await listRecipes();
-      setRecipe(all.find((r) => String(r.id) === id) ?? null);
+      const r = await getRecipe(id);
+      setRecipe(r);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load recipe');
     }
@@ -47,12 +48,12 @@ export default function RecipeDetailPage() {
       </main>
     );
 
-  const canDelete = user && (user.role === 'admin' || recipe.ownerId === user.id);
+  const canDelete = user && (user.isAdmin || recipe.authorId === user.id);
 
   return (
     <main className="page detail-page">
-      {recipe.image ? (
-        <img className="detail-image" src={recipe.image} alt={recipe.title} />
+      {recipe.imageUrl ? (
+        <img className="detail-image" src={recipe.imageUrl} alt={recipe.title} />
       ) : (
         <div className="detail-image placeholder-large">🍽️</div>
       )}
@@ -60,7 +61,7 @@ export default function RecipeDetailPage() {
         {recipe.title}
       </h1>
       <p className="muted" style={{ fontSize: '0.95rem', marginBottom: '1.25rem' }}>
-        by <strong>{recipe.ownerEmail}</strong> · {new Date(recipe.createdAt).toLocaleDateString()}
+        by <strong>{recipe.authorName}</strong> · {new Date(recipe.createdAt).toLocaleDateString()}
       </p>
       {canDelete && (
         <div className="detail-actions">
@@ -72,7 +73,7 @@ export default function RecipeDetailPage() {
           </button>
         </div>
       )}
-      <RecipeLists ingredients={recipe.ingredients} steps={recipe.steps} />
+      <RecipeLists ingredients={recipe.ingredients?.join('\n') || ''} steps={recipe.instructions || ''} />
       <p style={{ marginTop: '1.5rem' }}>
         <Link to="/">← Back to gallery</Link>
       </p>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { deleteRecipe, listRecipes } from '../api';
+import { deleteRecipe, fetchRecipes } from '../api';
 import { useAuth } from '../auth';
 import type { Recipe } from '../types';
 
@@ -11,8 +11,8 @@ export default function MyRecipesPage() {
 
   const load = useCallback(async () => {
     try {
-      const all = await listRecipes();
-      setRecipes(all.filter((r) => r.ownerId === user?.id));
+      const all = await fetchRecipes();
+      setRecipes(all.filter((r) => r.authorId === user?.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load recipes');
     }
@@ -22,7 +22,7 @@ export default function MyRecipesPage() {
     void load();
   }, [load]);
 
-  async function onDelete(id: number) {
+  async function onDelete(id: string) {
     if (!window.confirm('Delete this recipe?')) return;
     try {
       await deleteRecipe(id);
@@ -50,8 +50,8 @@ export default function MyRecipesPage() {
           {recipes.map((r) => (
             <div className="recipe-card" key={r.id}>
               <Link to={`/recipes/${r.id}`}>
-                {r.image ? (
-                  <img src={r.image} alt={r.title} loading="lazy" />
+                {r.imageUrl ? (
+                  <img src={r.imageUrl} alt={r.title} loading="lazy" />
                 ) : (
                   <div className="recipe-placeholder">🍽️</div>
                 )}

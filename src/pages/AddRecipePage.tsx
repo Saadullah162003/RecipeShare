@@ -1,18 +1,23 @@
 import type { ChangeEvent, FormEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createRecipeForm, listRecipes, updateRecipeForm } from '../api';
+import { createRecipe, getRecipe, updateRecipe, uploadRecipeImage } from '../api';
+import { useAuth } from '../auth';
 import type { Recipe } from '../types';
 
 export default function AddRecipePage() {
   const { id } = useParams();
-  const recipeId = id ? Number(id) : null;
-  const isEdit = recipeId !== null && Number.isFinite(recipeId);
+  const recipeId = id || null;
+  const isEdit = recipeId !== null;
   const navigate = useNavigate();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [ingredients, setIngredients] = useState('');
-  const [steps, setSteps] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [category, setCategory] = useState('');
+  const [prepTime, setPrepTime] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
@@ -22,21 +27,23 @@ export default function AddRecipePage() {
   const [loadingRecipe, setLoadingRecipe] = useState(isEdit);
 
   useEffect(() => {
-    if (!isEdit || recipeId === null) return;
+    if (!isEdit || !recipeId) return;
     let cancelled = false;
-    listRecipes()
-      .then((all: Recipe[]) => {
+    getRecipe(recipeId)
+      .then((recipe: Recipe) => {
         if (cancelled) return;
-        const recipe = all.find((r) => r.id === recipeId);
         if (!recipe) {
           setError('Recipe not found');
           setLoadingRecipe(false);
           return;
         }
         setTitle(recipe.title);
-        setIngredients(recipe.ingredients);
-        setSteps(recipe.steps);
-        setCurrentImage(recipe.image);
+        setDescription(recipe.description || '');
+        setIngredients(recipe.ingredients?.join('\n') || '');
+        setInstructions(recipe.instructions || '');
+        setCategory(recipe.category || '');
+        setPrepTime(recipe.prepTime?.toString() || '');
+        setCurrentImage(recipe.imageUrl || null);
         setLoadingRecipe(false);
       })
       .catch((err) => {
@@ -77,12 +84,37 @@ export default function AddRecipePage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
     try {
-      if (isEdit && recipeId !== null) {
-        await updateRecipeForm(recipeId, title, ingredients, steps, image, removeImage);
+      // Upload image to S3 if a new file is selected
+      let imageUrl: string | undefined = currentImage && !removeImage ? currentImage : undefined;
+      if (image) {
+        imageUrl = await uploadRecipeImage(image);
+      }
+
+      const ingredientsArray = ingredients.split('\n').filter(i => i.trim());
+      
+      const recipeInput = {
+        title,
+        description,
+        ingredients: ingredientsArray,
+        instructions,
+        category,
+        prepTime: prepTime ? parseInt(prepTime, 10) : undefined,
+        imageUrl: imageUrl || undefined,
+        authorId: user?.id || '',
+        authorName: user?.name || '',
+      };
+
+      if (isEdit && recipeId) {
+        const updateInput = {
+          id: recipeId,
+          ...recipeInput,
+        };
+        await updateRecipe(updateInput);
         navigate(`/recipes/${recipeId}`);
       } else {
-        await createRecipeForm(title, ingredients, steps, image);
+        await createRecipe(recipeInput);
         navigate('/');
       }
     } catch (err) {
@@ -118,6 +150,15 @@ export default function AddRecipePage() {
           />
         </label>
         <label>
+          Description
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            placeholder="Brief description of the recipe"
+          />
+        </label>
+        <label>
           Ingredients
           <textarea
             value={ingredients}
@@ -128,13 +169,30 @@ export default function AddRecipePage() {
           />
         </label>
         <label>
-          Steps
+          Instructions
           <textarea
-            value={steps}
-            onChange={(e) => setSteps(e.target.value)}
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
             required
             rows={7}
             placeholder={'One step per line, e.g.\nPreheat the oven\nMix the batter'}
+          />
+        </label>
+        <label>
+          Category
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="e.g., Dinner, Dessert"
+          />
+        </label>
+        <label>
+          Prep Time (minutes)
+          <input
+            type="number"
+            value={prepTime}
+            onChange={(e) => setPrepTime(e.target.value)}
+            placeholder="e.g., 30"
           />
         </label>
         <div className="image-picker">

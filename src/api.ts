@@ -1,158 +1,103 @@
-import type { Recipe, Stats, User } from './types';
+import { generateClient, get } from 'aws-amplify/api';
+import { uploadData } from 'aws-amplify/storage';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import type { Recipe, Stats } from './types';
 
-const TOKEN_KEY = 'recipeshare_token';
-const USER_KEY = 'recipeshare_user';
+const client = generateClient();
 
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+// 1. Upload image directly to S3 and return public URL
+export async function uploadRecipeImage(file: File): Promise<string> {
+  const key = `recipes/${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
+  await uploadData({
+    path: key,
+    data: file,
+    options: { contentType: file.type },
+  }).result;
+
+  const bucket = import.meta.env.VITE_S3_BUCKET;
+  const region = import.meta.env.VITE_AWS_REGION;
+  return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 }
 
-export function getStoredUser(): User | null {
-  try {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function storeSession(token: string, user: User) {
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
-
-export function clearSession() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-}
-
-async function authHeaders(): Promise<Record<string, string>> {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function handle<T>(res: Response): Promise<T> {
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok)
-    throw new Error((data as { error?: string }).error || `Request failed (${res.status})`);
-  return data as T;
-}
-
-export async function signup(email: string, password: string) {
-  const res = await fetch('/api/auth/signup', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+// 2. AppSync GraphQL Queries & Mutations
+export async function fetchRecipes(): Promise<Recipe[]> {
+  const res: any = await client.graphql({
+    query: `
+      query ListRecipes {
+        listRecipes {
+          id title description ingredients instructions category prepTime imageUrl authorId authorName createdAt
+        }
+      }
+    `,
   });
-  const data = await handle<{ token: string; user: User }>(res);
-  storeSession(data.token, data.user);
-  return data.user;
+  return res.data.listRecipes || [];
 }
 
-export async function login(email: string, password: string) {
-  const res = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+export async function getRecipe(id: string): Promise<Recipe> {
+  const res: any = await client.graphql({
+    query: `
+      query GetRecipe($id: ID!) {
+        getRecipe(id: $id) {
+          id title description ingredients instructions category prepTime imageUrl authorId authorName createdAt
+        }
+      }
+    `,
+    variables: { id },
   });
-  const data = await handle<{ token: string; user: User }>(res);
-  storeSession(data.token, data.user);
-  return data.user;
+  return res.data.getRecipe;
 }
 
-export async function logout() {
-  clearSession();
+export async function createRecipe(input: any): Promise<Recipe> {
+  const res: any = await client.graphql({
+    query: `
+      mutation CreateRecipe($input: CreateRecipeInput!) {
+        createRecipe(input: $input) {
+          id title description ingredients instructions category prepTime imageUrl authorId authorName createdAt
+        }
+      }
+    `,
+    variables: { input },
+  });
+  return res.data.createRecipe;
 }
 
-export async function fetchMe(): Promise<User> {
-  const res = await fetch('/api/auth/me', { headers: await authHeaders() });
-  const data = await handle<{ user: User }>(res);
-  return data.user;
+export async function updateRecipe(input: any): Promise<Recipe> {
+  const res: any = await client.graphql({
+    query: `
+      mutation UpdateRecipe($input: UpdateRecipeInput!) {
+        updateRecipe(input: $input) {
+          id title description ingredients instructions category prepTime imageUrl authorId authorName createdAt
+        }
+      }
+    `,
+    variables: { input },
+  });
+  return res.data.updateRecipe;
 }
 
+export async function deleteRecipe(id: string): Promise<void> {
+  await client.graphql({
+    query: `
+      mutation DeleteRecipe($id: ID!) {
+        deleteRecipe(id: $id) { id }
+      }
+    `,
+    variables: { id },
+  });
+}
+
+// 3. API Gateway REST endpoint (/stats) with Cognito JWT token
 export async function fetchStats(): Promise<Stats> {
-  const res = await fetch('/api/stats', { headers: await authHeaders() });
-  return handle<Stats>(res);
-}
+  const session = await fetchAuthSession();
+  const token = session.tokens?.idToken?.toString() || '';
 
-export async function createRecipeForm(
-  title: string,
-  ingredients: string,
-  steps: string,
-  image: File | null,
-): Promise<Recipe> {
-  const form = new FormData();
-  form.append('title', title);
-  form.append('ingredients', ingredients);
-  form.append('steps', steps);
-  if (image) form.append('image', image);
-  const res = await fetch('/api/recipes', {
-    method: 'POST',
-    headers: await authHeaders(),
-    body: form,
+  const restOp = get({
+    apiName: 'RecipeShareREST',
+    path: '/stats',
+    options: {
+      headers: { Authorization: token },
+    },
   });
-  return handle<Recipe>(res);
-}
-
-export async function updateRecipeForm(
-  id: number,
-  title: string,
-  ingredients: string,
-  steps: string,
-  image: File | null,
-  removeImage = false,
-): Promise<Recipe> {
-  const form = new FormData();
-  form.append('title', title);
-  form.append('ingredients', ingredients);
-  form.append('steps', steps);
-  if (image) form.append('image', image);
-  if (removeImage && !image) form.append('removeImage', 'true');
-  const res = await fetch(`/api/recipes/${id}`, {
-    method: 'PUT',
-    headers: await authHeaders(),
-    body: form,
-  });
-  return handle<Recipe>(res);
-}
-
-const LIST_RECIPES = /* GraphQL */ `
-  query {
-    listRecipes {
-      id
-      title
-      ingredients
-      steps
-      image
-      ownerId
-      ownerEmail
-      createdAt
-    }
-  }
-`;
-
-const DELETE_RECIPE = /* GraphQL */ `
-  mutation DeleteRecipe($id: Int!) {
-    deleteRecipe(id: $id)
-  }
-`;
-
-async function graphql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  const res = await fetch('/graphql', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-    body: JSON.stringify({ query, variables }),
-  });
-  const data = await res.json();
-  if (data.errors?.length) throw new Error(data.errors[0].message);
-  return data.data as T;
-}
-
-export async function listRecipes(): Promise<Recipe[]> {
-  const data = await graphql<{ listRecipes: Recipe[] }>(LIST_RECIPES);
-  return data.listRecipes;
-}
-
-export async function deleteRecipe(id: number): Promise<void> {
-  await graphql<{ deleteRecipe: boolean }>(DELETE_RECIPE, { id });
+  const { body } = await restOp.response;
+  return await body.json();
 }
