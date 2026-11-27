@@ -25,6 +25,7 @@ export async function uploadRecipeImage(file: File): Promise<string> {
 export async function fetchRecipes(): Promise<Recipe[]> {
   const res: any = await client.graphql({
     query: `query ListRecipes { listRecipes { ${RECIPE_FIELDS} } }`,
+    authMode: 'apiKey',
   });
   return res.data.listRecipes || [];
 }
@@ -33,6 +34,7 @@ export async function getRecipe(id: string): Promise<Recipe> {
   const res: any = await client.graphql({
     query: `query GetRecipe($id: ID!) { getRecipe(id: $id) { ${RECIPE_FIELDS} } }`,
     variables: { id },
+    authMode: 'apiKey',
   });
   return res.data.getRecipe;
 }
