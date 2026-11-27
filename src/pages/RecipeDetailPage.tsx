@@ -60,9 +60,27 @@ export default function RecipeDetailPage() {
       <h1 style={{ fontSize: '2.2rem', color: 'var(--primary)', fontFamily: 'Georgia, serif' }}>
         {recipe.title}
       </h1>
-      <p className="muted" style={{ fontSize: '0.95rem', marginBottom: '1.25rem' }}>
-        by <strong>{recipe.authorName}</strong> · {new Date(recipe.createdAt).toLocaleDateString()}
-      </p>
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+        {recipe.category && (
+          <span style={{ 
+            background: 'var(--primary)', 
+            color: 'white', 
+            padding: '0.25rem 0.75rem', 
+            borderRadius: '1rem', 
+            fontSize: '0.875rem' 
+          }}>
+            {recipe.category}
+          </span>
+        )}
+        {recipe.prepTime && (
+          <span className="muted" style={{ fontSize: '0.95rem' }}>
+            ⏱️ {recipe.prepTime} min prep time
+          </span>
+        )}
+        <span className="muted" style={{ fontSize: '0.95rem' }}>
+          by <strong>{recipe.authorName}</strong> · {new Date(recipe.createdAt).toLocaleDateString()}
+        </span>
+      </div>
       {canDelete && (
         <div className="detail-actions">
           <Link className="link-button" to={`/recipes/${recipe.id}/edit`}>
