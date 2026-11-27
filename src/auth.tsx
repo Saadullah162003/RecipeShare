@@ -70,7 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: { userAttributes: { email, name } },
     });
+    await signIn({ username: email, password });
+    await loadUser();
   };
+
+  
 
   const confirmRegistration = async (email: string, code: string) => {
     await confirmSignUp({ username: email, confirmationCode: code });
