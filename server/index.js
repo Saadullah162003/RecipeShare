@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
-import fs from 'node:fs';
+
 import { fileURLToPath } from 'node:url';
 import jwt from 'jsonwebtoken';
 import {
@@ -10,8 +10,8 @@ import {
   InitiateAuthCommand,
   SignUpCommand,
   ConfirmSignUpCommand,
-  AdminInitiateAuthCommand,
-  AdminGetUserCommand,
+
+
   AdminListGroupsForUserCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import {
@@ -51,7 +51,7 @@ function signToken(user) {
   });
 }
 
-async function getUserFromCognitoToken(token) {
+async function _getUserFromCognitoToken(token) {
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     const user = db.prepare('SELECT cognito_sub, email, role FROM users WHERE cognito_sub = ?').get(payload.sub);
@@ -200,7 +200,8 @@ app.post('/api/auth/exchange', async (req, res) => {
     );
 
     if (!tokenResponse.ok) {
-      const error = await tokenResponse.text();
+      const errorText = await tokenResponse.text();
+      console.error('Token exchange failed:', errorText);
       return res.status(400).json({ error: 'Failed to exchange token' });
     }
 
