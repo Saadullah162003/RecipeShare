@@ -9,7 +9,7 @@ export default function RecipeLists({ ingredients, steps }: RecipeListsProps) {
     .split(/\r?\n/)
     .map((item) => item.trim())
     .filter(Boolean);
-  
+
   const stepItems = steps
     .split(/\r?\n/)
     .map((item) => item.trim())

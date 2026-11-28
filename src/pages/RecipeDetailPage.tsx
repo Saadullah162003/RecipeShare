@@ -62,13 +62,15 @@ export default function RecipeDetailPage() {
       </h1>
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
         {recipe.category && (
-          <span style={{ 
-            background: 'var(--primary)', 
-            color: 'white', 
-            padding: '0.25rem 0.75rem', 
-            borderRadius: '1rem', 
-            fontSize: '0.875rem' 
-          }}>
+          <span
+            style={{
+              background: 'var(--primary)',
+              color: 'white',
+              padding: '0.25rem 0.75rem',
+              borderRadius: '1rem',
+              fontSize: '0.875rem',
+            }}
+          >
             {recipe.category}
           </span>
         )}
@@ -78,7 +80,8 @@ export default function RecipeDetailPage() {
           </span>
         )}
         <span className="muted" style={{ fontSize: '0.95rem' }}>
-          by <strong>{recipe.authorName}</strong> · {new Date(recipe.createdAt).toLocaleDateString()}
+          by <strong>{recipe.authorName}</strong> ·{' '}
+          {new Date(recipe.createdAt).toLocaleDateString()}
         </span>
       </div>
       {canDelete && (
@@ -91,7 +94,10 @@ export default function RecipeDetailPage() {
           </button>
         </div>
       )}
-      <RecipeLists ingredients={recipe.ingredients?.join('\n') || ''} steps={recipe.instructions || ''} />
+      <RecipeLists
+        ingredients={recipe.ingredients?.join('\n') || ''}
+        steps={recipe.instructions || ''}
+      />
       <p style={{ marginTop: '1.5rem' }}>
         <Link to="/">← Back to gallery</Link>
       </p>

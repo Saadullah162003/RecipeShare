@@ -9,6 +9,19 @@ const RECIPE_FIELDS = `
   id title description ingredients instructions category prepTime imageUrl authorId authorName createdAt
 `;
 
+interface GraphQLResult<T> {
+  data: T;
+}
+
+export type CreateRecipePayload = Omit<Recipe, 'id' | 'createdAt'> & {
+  id?: string;
+  createdAt?: string;
+};
+
+export type UpdateRecipePayload = Partial<Omit<Recipe, 'id'>> & {
+  id: string;
+};
+
 export async function uploadRecipeImage(file: File): Promise<string> {
   const key = `recipes/${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
   await uploadData({
@@ -23,30 +36,30 @@ export async function uploadRecipeImage(file: File): Promise<string> {
 }
 
 export async function fetchRecipes(): Promise<Recipe[]> {
-  const res: any = await client.graphql({
+  const res = (await client.graphql({
     query: `query ListRecipes { listRecipes { ${RECIPE_FIELDS} } }`,
-  });
+  })) as GraphQLResult<{ listRecipes?: Recipe[] }>;
   return res.data.listRecipes || [];
 }
 
 export async function getRecipe(id: string): Promise<Recipe> {
-  const res: any = await client.graphql({
+  const res = (await client.graphql({
     query: `query GetRecipe($id: ID!) { getRecipe(id: $id) { ${RECIPE_FIELDS} } }`,
     variables: { id },
-  });
+  })) as GraphQLResult<{ getRecipe: Recipe }>;
   return res.data.getRecipe;
 }
 
-export async function createRecipe(input: any): Promise<Recipe> {
-  const res: any = await client.graphql({
+export async function createRecipe(input: CreateRecipePayload): Promise<Recipe> {
+  const res = (await client.graphql({
     query: `mutation CreateRecipe($input: CreateRecipeInput!) { createRecipe(input: $input) { ${RECIPE_FIELDS} } }`,
     variables: { input },
     authMode: 'userPool',
-  });
+  })) as GraphQLResult<{ createRecipe: Recipe }>;
   return res.data.createRecipe;
 }
 
-export async function updateRecipe(input: any): Promise<Recipe> {
+export async function updateRecipe(input: UpdateRecipePayload): Promise<Recipe> {
   const sanitizedInput = {
     id: input.id,
     ...(input.title !== undefined && { title: input.title }),
@@ -58,11 +71,11 @@ export async function updateRecipe(input: any): Promise<Recipe> {
     ...(input.imageUrl !== undefined && { imageUrl: input.imageUrl }),
   };
 
-  const res: any = await client.graphql({
+  const res = (await client.graphql({
     query: `mutation UpdateRecipe($input: UpdateRecipeInput!) { updateRecipe(input: $input) { ${RECIPE_FIELDS} } }`,
     variables: { input: sanitizedInput },
     authMode: 'userPool',
-  });
+  })) as GraphQLResult<{ updateRecipe: Recipe }>;
   return res.data.updateRecipe;
 }
 

@@ -74,8 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadUser();
   };
 
-  
-
   const confirmRegistration = async (email: string, code: string) => {
     await confirmSignUp({ username: email, confirmationCode: code });
   };
@@ -96,7 +94,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, confirmRegistration, loginWithGoogle, logout, getToken }}
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        confirmRegistration,
+        loginWithGoogle,
+        logout,
+        getToken,
+      }}
     >
       {children}
     </AuthContext.Provider>

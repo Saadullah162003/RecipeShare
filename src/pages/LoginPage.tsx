@@ -58,7 +58,7 @@ export default function LoginPage() {
         <button type="submit" disabled={loading}>
           {loading ? 'Logging in…' : '🍳 Log in'}
         </button>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', margin: '1rem 0' }}>
           <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
           <span style={{ padding: '0 1rem', color: '#6b7280', fontSize: '0.875rem' }}>or</span>

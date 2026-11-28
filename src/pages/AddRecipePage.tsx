@@ -84,7 +84,7 @@ export default function AddRecipePage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     try {
       // Upload image to S3 if a new file is selected
       let imageUrl: string | null | undefined = currentImage && !removeImage ? currentImage : null;
@@ -96,8 +96,8 @@ export default function AddRecipePage() {
         imageUrl = null;
       }
 
-      const ingredientsArray = ingredients.split('\n').filter(i => i.trim());
-      
+      const ingredientsArray = ingredients.split('\n').filter((i) => i.trim());
+
       const recipeInput = {
         title,
         description,
